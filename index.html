@@ -1,0 +1,1318 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body style="margin:0"><title>Mega Player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Montserrat:wght@800&display=swap">
+<style>
+/* Concept : la page est une chaîne de télé. Haut = image plein cadre et bandeau d'infos (OSD) ;
+   fonctions = guide des programmes ; captures réelles de la box, du PC et du téléphone ;
+   tarifs = barre de lecture ; fin de page = mire de fin des programmes. Colonne de 1200 px. */
+:root {
+  color-scheme: dark;
+  --ink: #0A0B0E;
+  --ink-2: #0E1015;
+  --panel: #14161C;
+  --panel-2: #1B1E26;
+  --line: #2A2E39;
+  --line-strong: #3C414E;
+  --text: #F3F1EA;
+  --muted: #A3A7B2;
+  --accent: #7A2CFF;
+  --accent-2: #3B0BC9;
+  --accent-3: #D46BFF;
+  --on-accent: #FFFFFF;
+  --live: #FF3B47;
+  --on-live: #FFFFFF;
+  --qr-bg: #F3F1EA;
+  --qr-fg: #0A0B0E;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --font-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  --font-brand: "Montserrat", "Segoe UI", sans-serif;
+  --wrap: 1200px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 74px; }
+body { background: var(--ink); color: var(--text); font-family: var(--font-body); font-size: 17.5px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent-3); outline-offset: 3px; }
+h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 800; text-transform: uppercase; line-height: .95; text-wrap: balance; }
+p { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+img { max-width: 100%; }
+.wrap { width: 100%; max-width: var(--wrap); margin-inline: auto; padding-inline: 20px; }
+.mono { font-family: var(--font-mono); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ---------- Barre du haut ---------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 60; background: color-mix(in srgb, var(--ink) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 18px; min-height: 62px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand svg { height: 24px; width: auto; }
+.brand span { font: 800 14px var(--font-brand); letter-spacing: .16em; }
+.osd-ch { font: 600 12px var(--font-mono); letter-spacing: .06em; color: var(--accent-3); padding: 4px 9px; border: 1px solid color-mix(in srgb, var(--accent-3) 45%, transparent); white-space: nowrap; }
+.nav { display: flex; gap: 18px; margin-left: auto; }
+.nav a { text-decoration: none; color: var(--muted); font: 600 15px var(--font-body); white-space: nowrap; }
+.nav a:hover { color: var(--text); }
+.zap { display: flex; gap: 4px; }
+.zap button { font: 600 12px var(--font-mono); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); padding: 7px 9px; cursor: pointer; }
+.zap button:hover { border-color: var(--accent); color: var(--accent-3); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 24px; font: 700 15.5px var(--font-body); letter-spacing: .02em; text-decoration: none; border: 0; cursor: pointer; white-space: nowrap; }
+.btn-accent { color: var(--on-accent); background: linear-gradient(225deg, transparent 10px, var(--accent) 0); }
+.btn-accent:hover { filter: brightness(1.15); }
+.btn-line { color: var(--text); background: color-mix(in srgb, var(--ink) 55%, transparent); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.btn-line:hover { box-shadow: inset 0 0 0 1px var(--accent-3); }
+.top .btn { padding: 9px 16px; font-size: 14px; }
+@media (max-width: 1180px) { .zap, .osd-ch { display: none; } }
+@media (max-width: 900px) { .nav { display: none; } .top .btn { margin-left: auto; } }
+
+/* ---------- Direct (haut de page) ---------- */
+.onair { position: relative; overflow: hidden; isolation: isolate; background: var(--ink); }
+.city { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -2; display: block; }
+.onair-shade { position: absolute; inset: 0; z-index: -1; background:
+  linear-gradient(0deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 80%, transparent) 34%, transparent 66%),
+  linear-gradient(90deg, color-mix(in srgb, var(--ink) 70%, transparent) 0%, transparent 62%); }
+.osd-wrap { position: relative; padding-block: clamp(150px, 24vh, 250px) 44px; }
+.bug { position: absolute; top: 26px; right: 20px; display: flex; align-items: center; gap: 9px; opacity: .92; }
+.bug svg { height: 34px; width: auto; }
+.bug span { font: 800 12px var(--font-brand); letter-spacing: .18em; }
+.osd { max-width: 1000px; }
+.osd-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; }
+.chnum { font: 800 26px/1 var(--font-display); color: var(--on-accent); background: linear-gradient(225deg, transparent 9px, var(--accent) 0); padding: 7px 15px 5px; }
+.chname { font: 800 15px var(--font-brand); letter-spacing: .18em; }
+.livep { display: inline-flex; align-items: center; gap: 7px; font: 600 12.5px var(--font-mono); letter-spacing: .08em; color: var(--on-live); background: var(--live); padding: 4px 9px; }
+.livep i { width: 7px; height: 7px; border-radius: 50%; background: var(--on-live); }
+.clock { margin-left: auto; font: 600 15px var(--font-mono); color: var(--muted); }
+.onair h1 { font-size: clamp(50px, 8.4vw, 122px); line-height: .96; letter-spacing: -.005em; }
+.onair h1 em { font-style: normal; color: var(--accent-3); }
+.osd-desc { margin-top: 22px; font-size: clamp(17px, 1.6vw, 20px); color: color-mix(in srgb, var(--text) 84%, transparent); max-width: 60ch; }
+.osd-progress { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; margin-top: 30px; font-size: 13px; color: var(--muted); }
+.track { position: relative; height: 5px; background: color-mix(in srgb, var(--text) 18%, transparent); }
+.track i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+.track i::after { content: ""; position: absolute; right: -6px; top: 50%; width: 13px; height: 13px; transform: translateY(-50%); border-radius: 50%; background: var(--accent-3); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
+.osd-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 28px; margin-top: 22px; }
+.next { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 16px; max-width: 64ch; }
+.next .mono { font-size: 12.5px; font-weight: 600; letter-spacing: .08em; color: var(--accent-3); white-space: nowrap; }
+.ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.crawl { border-block: 1px solid var(--line); background: var(--ink-2); }
+.crawl .wrap { display: flex; align-items: center; gap: 18px; min-height: 56px; padding-block: 10px; }
+.crawl b { font: 800 15px var(--font-display); letter-spacing: .08em; color: var(--on-live); background: var(--live); padding: 4px 10px; white-space: nowrap; }
+.crawl ul { display: flex; flex-wrap: wrap; gap: 6px 0; font-weight: 600; font-size: 15.5px; }
+.crawl li { display: flex; align-items: center; }
+.crawl li + li::before { content: ""; width: 6px; height: 6px; background: var(--accent); margin-inline: 14px; transform: rotate(45deg); }
+@media (max-width: 640px) { .crawl .wrap { flex-direction: column; align-items: flex-start; gap: 10px; padding-block: 14px; } }
+
+/* ---------- Têtes de section ---------- */
+.sec { padding-block: 116px 0; }
+.head { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px 40px; margin-bottom: 46px; }
+.chtag { align-self: start; display: flex; flex-direction: column; gap: 3px; border-top: 3px solid var(--accent); padding-top: 10px; }
+.chtag .mono { font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+.chtag b { font: 800 46px/1 var(--font-display); color: var(--accent-3); }
+.chtag .lbl { font: 700 14px var(--font-display); text-transform: uppercase; letter-spacing: .08em; }
+.head h2 { font-size: clamp(42px, 6.4vw, 86px); }
+.head .lede { margin-top: 18px; color: var(--muted); font-size: 18.5px; max-width: 62ch; }
+@media (max-width: 760px) {
+  .sec { padding-block: 84px 0; }
+  .head { grid-template-columns: 1fr; }
+  .chtag { flex-direction: row; align-items: baseline; gap: 10px; }
+  .chtag b { font-size: 30px; }
+}
+
+/* ---------- Captures ---------- */
+.tvshot, .telshot { position: relative; margin: 0; overflow: hidden; background: var(--ink); }
+.tvshot { border: 6px solid var(--panel-2); border-radius: 8px; box-shadow: 0 30px 70px -36px color-mix(in srgb, var(--accent) 60%, transparent); }
+.telshot { border: 5px solid var(--panel-2); border-radius: 20px; box-shadow: 0 24px 50px -18px rgba(0, 0, 0, .9); }
+.tvshot img, .telshot img { display: block; width: 100%; height: auto; }
+
+/* ---------- Programme (guide) ---------- */
+.epg { border: 1px solid var(--line); background: var(--ink-2); }
+.epg-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 36px; align-items: end; padding: 26px 28px 24px; border-bottom: 1px solid var(--line); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, var(--panel)), var(--panel) 65%); }
+.epg-info .k { font: 600 13px var(--font-mono); letter-spacing: .06em; color: var(--accent-3); }
+.epg-info h3 { font-size: clamp(32px, 3.6vw, 46px); margin: 8px 0 10px; }
+.epg-info .d { color: color-mix(in srgb, var(--text) 80%, transparent); max-width: 64ch; min-height: 3.2em; }
+.epg-info .hint { font: 500 12.5px var(--font-mono); color: var(--muted); text-align: right; line-height: 1.9; }
+.epg-info .hint kbd { font: 600 12px var(--font-mono); color: var(--text); border: 1px solid var(--line-strong); padding: 1px 6px; }
+.epg-body { position: relative; }
+.epg-head, .epg-row { display: grid; grid-template-columns: 168px minmax(0, 1fr); }
+.epg-head { height: 42px; border-bottom: 1px solid var(--line); }
+.epg-head .day { align-self: center; padding-left: 20px; font: 600 12.5px var(--font-mono); letter-spacing: .06em; }
+.epg-times { position: relative; }
+.epg-times span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; padding-left: 8px; border-left: 1px solid var(--line); font: 500 12px var(--font-mono); color: var(--muted); }
+.epg-row { min-height: 104px; border-bottom: 1px solid var(--line); }
+.epg-row:last-child { border-bottom: 0; }
+.epg-ch { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding-inline: 20px; border-right: 1px solid var(--line); }
+.epg-ch b { font: 800 30px/1 var(--font-display); color: var(--accent-3); }
+.epg-ch span { font: 700 15px var(--font-display); text-transform: uppercase; letter-spacing: .06em; }
+.epg-track { position: relative; }
+.cell { position: absolute; top: 9px; bottom: 9px; left: calc(var(--s) * 1%); width: calc(var(--w) * 1% - 6px); margin-left: 3px; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 10px 13px; text-align: left; background: var(--panel); border: 1px solid var(--line); color: var(--text); font: inherit; cursor: pointer; overflow: hidden; }
+.cell:hover { border-color: var(--accent-3); }
+.cell .t { font: 500 12px var(--font-mono); color: var(--muted); white-space: nowrap; }
+.cell .t em { font-style: normal; font-weight: 600; color: var(--live); margin-left: 6px; }
+.cell .n { font: 700 20px/1.05 var(--font-display); text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell .s { font-size: 14.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell .more { display: none; }
+.cell.live { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.cell[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.cell[aria-pressed="true"] .t, .cell[aria-pressed="true"] .s, .cell[aria-pressed="true"] .t em { color: color-mix(in srgb, var(--on-accent) 80%, transparent); }
+.nowline { position: absolute; top: 0; bottom: 0; left: calc(168px + (100% - 168px) * .1958); width: 2px; background: var(--live); pointer-events: none; z-index: 2; }
+.nowline span { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font: 600 11.5px var(--font-mono); color: var(--on-live); background: var(--live); padding: 2px 6px; }
+@media (max-width: 900px) {
+  .epg-info, .epg-head, .nowline { display: none; }
+  .epg-row { grid-template-columns: 1fr; min-height: 0; }
+  .epg-ch { flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 10px; padding: 18px 16px 6px; border-right: 0; }
+  .epg-track { display: grid; gap: 8px; padding: 6px 12px 18px; }
+  .cell { position: static; width: auto; margin: 0; padding: 14px; }
+  .cell .n { white-space: normal; }
+  .cell .s { display: none; }
+  .cell .more { display: block; font-size: 15.5px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
+  .cell[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); color: var(--text); border-color: var(--accent); }
+  .cell[aria-pressed="true"] .t { color: var(--muted); }
+  .cell[aria-pressed="true"] .t em { color: var(--live); }
+  .cell[aria-pressed="true"] .more { color: var(--muted); }
+}
+
+/* ---------- 4 vues ---------- */
+.vues { display: grid; gap: 22px; }
+.vue-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.vue-tabs button { font: 700 17px var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--text); background: var(--panel); border: 1px solid var(--line); padding: 10px 18px; cursor: pointer; }
+.vue-tabs button:hover { border-color: var(--accent-3); }
+.vue-tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.vue-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 20%); gap: 24px; align-items: end; }
+.vshot { margin: 0; min-width: 0; }
+.vshot figcaption { font: 600 12.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.vue-stage .tvshot { aspect-ratio: 1280 / 683; }
+.vue-stage .telshot { aspect-ratio: 600 / 1300; }
+.vue-stage img { height: 100%; object-fit: cover; object-position: top; }
+.vue-desc { color: color-mix(in srgb, var(--text) 82%, transparent); font-size: 18px; max-width: 72ch; min-height: 3.2em; }
+@media (max-width: 760px) { .vue-stage { grid-template-columns: minmax(0, 1fr); } .vue-stage .vshot + .vshot { width: 56%; justify-self: center; } }
+
+/* ---------- À la une ---------- */
+.spots { border-top: 1px solid var(--line); }
+.spot { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.25fr); gap: 32px 60px; align-items: center; padding-block: 64px; border-bottom: 1px solid var(--line); }
+.spot:nth-child(even) { grid-template-columns: minmax(0, 1.25fr) minmax(0, .9fr); }
+.spot:nth-child(even) .duo { order: -1; }
+.spot-k { font: 600 12.5px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-3); }
+.spot h3 { font-size: clamp(38px, 4.6vw, 62px); margin: 10px 0 16px; }
+.spot-txt > p { color: color-mix(in srgb, var(--text) 80%, transparent); font-size: 18px; max-width: 46ch; }
+.ticks2 { display: grid; gap: 10px; margin-top: 22px; }
+.ticks2 li { display: grid; grid-template-columns: 14px 1fr; gap: 10px; font-size: 16.5px; }
+.ticks2 li::before { content: ""; width: 7px; height: 7px; margin-top: 10px; background: var(--accent); transform: rotate(45deg); }
+.duo { position: relative; padding: 0 17% 11% 0; min-width: 0; }
+.duo .telshot { position: absolute; right: 0; bottom: 0; width: 22%; }
+@media (max-width: 900px) { .spot, .spot:nth-child(even) { grid-template-columns: minmax(0, 1fr); padding-block: 48px; } .spot:nth-child(even) .duo { order: 0; } }
+
+/* ---------- En images ---------- */
+.zg { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 26px; align-items: start; }
+.zg-screen .tvshot { aspect-ratio: 1280 / 680; }
+.zg-screen .tvshot img { height: 100%; object-fit: cover; object-position: top; }
+.zg-osd { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center; margin-top: 16px; }
+.zg-osd .chnum { grid-row: span 2; align-self: start; }
+.zg-osd b { font: 800 24px/1 var(--font-display); text-transform: uppercase; }
+.zg-osd p { color: var(--muted); font-size: 16px; }
+.zg-list { display: grid; gap: 6px; align-content: start; }
+.zg-list button { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line); color: var(--text); padding: 12px 14px; font: 600 15.5px var(--font-body); cursor: pointer; white-space: nowrap; }
+.zg-list button:hover { border-color: var(--accent-3); }
+.zg-list button span { font: 800 22px/1 var(--font-display); color: var(--accent-3); }
+.zg-list button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.zg-list button[aria-selected="true"] span { color: var(--on-accent); }
+.zg-hint { font: 500 12.5px var(--font-mono); color: var(--muted); margin-top: 6px; }
+.zg > * { min-width: 0; }
+@media (max-width: 900px) { .zg { grid-template-columns: minmax(0, 1fr); } .zg-list { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 6px; } .zg-hint { display: none; } }
+
+/* ---------- Écrans ---------- */
+.screens3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--line); }
+.dev { display: flex; flex-direction: column; gap: 12px; padding: 30px 30px 36px; min-width: 0; }
+.dev + .dev { border-left: 1px solid var(--line); }
+.devshot { height: 260px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 8px; }
+.devshot .tvshot { width: 100%; }
+.devshot .telshot { height: 100%; aspect-ratio: 600 / 1300; }
+.devshot .telshot img { height: 100%; object-fit: cover; object-position: top; }
+.devshot .pcshot { width: 100%; border-top-width: 20px; border-radius: 6px; }
+.dev h3 { font-size: 34px; }
+.dev .sub { color: var(--muted); }
+.dev ul { display: grid; gap: 9px; margin-top: 6px; }
+.dev li { display: grid; grid-template-columns: 14px 1fr; gap: 10px; font-size: 16px; }
+.dev li::before { content: ""; width: 7px; height: 7px; margin-top: 9px; background: var(--accent); transform: rotate(45deg); }
+@media (max-width: 920px) { .screens3 { grid-template-columns: 1fr; } .dev + .dev { border-left: 0; border-top: 1px solid var(--line); } .dev { padding-inline: 4px; } }
+.strip-h { font-size: 32px; margin: 64px 0 20px; }
+.phones { display: grid; grid-auto-flow: column; grid-auto-columns: 210px; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 14px; scrollbar-color: var(--line-strong) transparent; }
+.ph { margin: 0; scroll-snap-align: start; }
+.ph .telshot img { aspect-ratio: 600 / 1300; object-fit: cover; object-position: top; }
+.ph figcaption { margin-top: 10px; font: 700 15px var(--font-display); text-transform: uppercase; letter-spacing: .06em; }
+
+/* ---------- Couleur ---------- */
+.colorbox { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px 56px; align-items: center; padding: 56px; border: 1px solid var(--line); background: radial-gradient(60% 90% at 24% 50%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%), var(--ink-2); }
+.bigmark { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.bigmark svg { width: min(330px, 82%); height: auto; }
+.bigmark span { font: 800 clamp(18px, 2.4vw, 28px) var(--font-brand); letter-spacing: .2em; }
+.colorbox h3 { font-size: 34px; }
+.colorbox .txt { color: var(--muted); margin-top: 12px; max-width: 50ch; }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.sw { display: inline-flex; align-items: center; gap: 10px; padding: 10px 15px 10px 10px; background: var(--panel); border: 1px solid var(--line); color: var(--text); font: 600 15px var(--font-body); cursor: pointer; }
+.sw i { width: 22px; height: 22px; border-radius: 50%; background: var(--sw); }
+.sw:hover { border-color: var(--line-strong); }
+.sw[aria-checked="true"] { border-color: var(--accent-3); box-shadow: inset 0 0 0 1px var(--accent-3); }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line); }
+.facts b { display: block; font: 800 40px/1 var(--font-display); color: var(--accent-3); }
+.facts span { font-size: 14.5px; color: var(--muted); }
+@media (max-width: 900px) { .colorbox { grid-template-columns: 1fr; padding: 34px 22px; } .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Fiche technique ---------- */
+.specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 56px; margin: 0 0 64px; }
+.specs div { display: flex; align-items: baseline; gap: 12px; padding-block: 14px; border-bottom: 1px solid var(--line); min-width: 0; }
+.specs dt { font: 600 12.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.specs .lead { flex: 1; min-width: 16px; border-bottom: 2px dotted var(--line-strong); transform: translateY(-5px); }
+.specs dd { margin: 0; font-weight: 600; text-align: right; }
+@media (max-width: 820px) { .specs { grid-template-columns: 1fr; } }
+.subh { font-size: 32px; margin-bottom: 18px; }
+.tbl { overflow-x: auto; border-top: 3px solid var(--accent); }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 16px; }
+th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+thead th { font: 600 12.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); width: 20%; }
+thead th:first-child { width: 40%; }
+td:first-child { font-weight: 600; }
+.yes, .no { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.yes { background: var(--accent-3); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent); }
+.no { border: 2px solid var(--line-strong); }
+td.p { font: 600 13.5px var(--font-mono); color: var(--accent-3); }
+.tnote { margin-top: 14px; color: var(--muted); font-size: 14.5px; max-width: 80ch; }
+@media (max-width: 640px) {
+  .tbl { overflow: visible; }
+  .tbl table, .tbl tbody, .tbl tr, .tbl td { display: block; }
+  .tbl table { min-width: 0; }
+  .tbl thead { display: none; }
+  .tbl tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .tbl td { padding: 0; border: 0; }
+  .tbl td:first-child { grid-column: 1 / -1; }
+  .tbl td:nth-child(n+2)::before { display: block; margin-bottom: 6px; font: 600 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .tbl td:nth-child(2)::before { content: "Box"; }
+  .tbl td:nth-child(3)::before { content: "Téléphone"; }
+  .tbl td:nth-child(4)::before { content: "PC"; }
+}
+
+/* ---------- Tarifs ---------- */
+.track-title { font: 600 12.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+.price { font: 800 44px/1 var(--font-display); color: var(--accent-3); }
+.seek { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; padding-top: 36px; }
+.seek::before { content: ""; position: absolute; top: 10px; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--accent-2), var(--accent) 60%, var(--accent-3)); }
+.chap { position: relative; display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+.chap::before { content: ""; position: absolute; top: -36px; left: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); border: 4px solid var(--accent); }
+.chap.inf::before { background: var(--accent); }
+.chap .k { font: 600 12.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.chap .dur { font: 800 66px/.9 var(--font-display); text-transform: uppercase; }
+.chap .note { color: var(--muted); font-size: 15.5px; }
+.pcplan { margin-top: 60px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 14px 26px; align-items: center; padding: 26px 30px; border: 1px solid var(--line); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, var(--panel)), var(--panel)); }
+.pcplan svg { width: 38px; height: 38px; color: var(--accent-3); }
+.pcplan .track-title { margin-bottom: 6px; }
+.pcplan h3 { font-size: 46px; }
+.pcplan .note { color: var(--muted); margin-top: 8px; max-width: 60ch; }
+.pcplan .price { font-size: 60px; }
+.buy { margin-top: 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 28px; padding: 22px 30px; border: 1px dashed var(--line-strong); }
+.buy p { color: var(--muted); max-width: 64ch; }
+@media (max-width: 900px) {
+  .seek { grid-template-columns: 1fr; gap: 34px; padding: 0 0 0 44px; }
+  .seek::before { top: 0; bottom: 0; left: 10px; right: auto; width: 4px; height: auto; background: linear-gradient(180deg, var(--accent-2), var(--accent) 60%, var(--accent-3)); }
+  .chap { padding-top: 0; }
+  .chap::before { top: 6px; left: -44px; }
+}
+@media (max-width: 640px) { .pcplan { grid-template-columns: 38px minmax(0, 1fr); padding: 22px 18px; } .pcplan .price { grid-column: 2; font-size: 48px; } .buy { padding: 20px 18px; } }
+
+/* ---------- Démarrer ---------- */
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.steps li { display: grid; gap: 10px; align-content: start; padding: 28px 28px 30px 0; }
+.steps li + li { padding-left: 28px; border-left: 1px solid var(--line); }
+.steps .n { font: 800 92px/.8 var(--font-display); color: transparent; -webkit-text-stroke: 2px var(--accent-3); }
+.steps h3 { font-size: 30px; }
+.steps p { color: var(--muted); }
+@media (max-width: 860px) { .steps { grid-template-columns: 1fr; } .steps li, .steps li + li { padding: 24px 0; border-left: 0; } .steps li + li { border-top: 1px solid var(--line); } }
+.dl-title { font-size: 32px; margin-top: 56px; }
+.dl { margin-top: 18px; border-top: 3px solid var(--accent); }
+.dl-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 18px 4px; border-bottom: 1px solid var(--line); }
+.dl-row svg { width: 28px; height: 28px; color: var(--accent-3); }
+.dl-row b { display: block; font: 800 24px var(--font-display); text-transform: uppercase; }
+.dl-row .req { font-size: 13px; color: var(--muted); }
+.dl-url { display: block; margin-top: 6px; font: 500 12px/1.5 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; user-select: all; }
+.dl-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dl-help { display: grid; gap: 8px; margin-top: 18px; padding: 18px 22px; border: 1px dashed var(--line-strong); color: var(--muted); font-size: 15.5px; }
+.dl-help b { color: var(--text); }
+@media (max-width: 640px) { .dl-row { grid-template-columns: 36px minmax(0, 1fr); } .dl-row .dl-actions { grid-column: 2; } .dl-help { padding: 16px; } }
+
+/* ---------- Questions ---------- */
+.faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; border-top: 1px solid var(--line); align-items: start; }
+details { border-bottom: 1px solid var(--line); }
+summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 18px; padding-block: 20px; font: 700 18px var(--font-body); }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 600 20px var(--font-mono); color: var(--accent-3); line-height: 1.2; }
+details[open] summary::after { content: "−"; }
+details p { color: var(--muted); padding-bottom: 22px; max-width: 62ch; }
+@media (max-width: 860px) { .faq { grid-template-columns: 1fr; } }
+
+/* ---------- Contact ---------- */
+.contacts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-block: 1px solid var(--line); }
+.tg { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 26px; align-items: center; padding: 32px 32px 32px 0; min-width: 0; }
+.tg + .tg { padding-left: 32px; border-left: 1px solid var(--line); }
+.qr { width: 136px; aspect-ratio: 1; background: var(--qr-bg); }
+.qr svg { display: block; width: 100%; height: 100%; }
+.qr svg rect { fill: var(--qr-bg); }
+.qr svg path { fill: var(--qr-fg); }
+.tg .k { font: 600 12.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.handle { font: 800 clamp(32px, 3.6vw, 48px)/1 var(--font-display); margin: 8px 0 18px; overflow-wrap: anywhere; user-select: all; }
+.tg-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tg-actions .btn { padding: 10px 18px; font-size: 14.5px; }
+.channel { margin-bottom: 18px; padding: 28px 30px; border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line)); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, var(--panel)), var(--panel) 70%); }
+.channel .ch-title { font-size: clamp(30px, 3.4vw, 44px); margin: 8px 0; }
+.channel .handle { font: 600 clamp(15px, 1.7vw, 20px) var(--font-mono); color: var(--muted); margin: 0 0 18px; }
+@media (max-width: 900px) { .contacts { grid-template-columns: 1fr; } .tg, .tg + .tg { padding: 26px 0; border-left: 0; } .tg + .tg { border-top: 1px solid var(--line); } .channel { padding: 24px 20px; } }
+@media (max-width: 520px) { .tg { grid-template-columns: 1fr; gap: 16px; } .qr { width: 124px; } }
+
+/* ---------- Fin des programmes ---------- */
+.end { margin-top: 136px; background: var(--ink-2); }
+.mire { height: 22px; background: linear-gradient(90deg, #C0C0C0 0 14.28%, #C0C000 0 28.57%, #00C0C0 0 42.85%, #00C000 0 57.14%, #C000C0 0 71.42%, #C00000 0 85.71%, #0000C0 0); }
+.mire2 { height: 6px; background: linear-gradient(90deg, #0000C0 0 14.28%, #131313 0 28.57%, #C000C0 0 42.85%, #131313 0 57.14%, #00C0C0 0 71.42%, #131313 0 85.71%, #C0C0C0 0); }
+.end-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: 32px; padding-block: 52px 30px; }
+.fin { font: 600 12.5px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-3); margin-bottom: 16px; }
+.end .tag { color: var(--muted); font-size: 15.5px; max-width: 44ch; margin-top: 14px; }
+.end h4 { font: 600 12px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.end ul { display: grid; gap: 9px; font-size: 15.5px; }
+.end ul a { text-decoration: none; }
+.end ul a:hover { color: var(--accent-3); }
+.legal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding-block: 20px 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+@media (max-width: 760px) { .end-grid { grid-template-columns: 1fr 1fr; } .end-grid > :first-child { grid-column: 1 / -1; } }
+</style>
+
+<svg class="defs" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="mp-mBase" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F5F8"/><stop offset="1" stop-color="#C3C6D0"/></linearGradient>
+    <linearGradient id="mp-mFace" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".5" stop-color="#F3F4F7"/><stop offset="1" stop-color="#D2D5DD"/></linearGradient>
+    <linearGradient id="mp-dBase" gradientUnits="userSpaceOnUse" x1="760" y1="300" x2="1000" y2="960"><stop offset="0" style="stop-color: var(--accent)"/><stop offset="1" style="stop-color: var(--accent-2)"/></linearGradient>
+    <linearGradient id="mp-dFace" gradientUnits="userSpaceOnUse" x1="1150" y1="330" x2="760" y2="900"><stop offset="0" style="stop-color: var(--accent-3)"/><stop offset=".28" style="stop-color: var(--accent)"/><stop offset="1" style="stop-color: var(--accent-2)"/></linearGradient>
+    <linearGradient id="mp-mPli" gradientUnits="userSpaceOnUse" x1="385" y1="0" x2="675" y2="0"><stop offset="0" stop-color="#5A5E6E" stop-opacity=".30"/><stop offset=".5" stop-color="#5A5E6E" stop-opacity=".06"/><stop offset="1" stop-color="#5A5E6E" stop-opacity=".16"/></linearGradient>
+    <filter id="mp-lueur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="mp-halo" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="26"/></filter>
+    <filter id="mp-haloM" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+    <clipPath id="mp-clipM"><path d="M134.0,336.3 L384.8,527.7 L650.0,335.4 L650.0,892.2 L527.0,786.1 L527.0,572.0 L385.1,678.2 L245.0,571.8 L245.0,782.7 L134.0,869.3 Z"/></clipPath>
+    <symbol id="mp-mono" viewBox="59 244 1184 797">
+      <path d="M665.0,304.0 L860.0,304.0 L1090.0,446.0 L1114.7,462.9 L1135.6,481.0 L1152.6,500.4 L1165.9,520.9 L1175.4,542.7 L1181.1,565.8 L1183.0,590.0 L1181.7,612.6 L1177.7,633.4 L1171.1,652.6 L1161.8,670.0 L1149.8,685.7 L1135.2,699.7 L1118.0,712.0 L685.0,981.0 L685.0,812.0 L982.0,605.0 L665.0,378.0 Z" fill="url(#mp-dBase)" opacity=".75" filter="url(#mp-halo)"/>
+      <path d="M119.0,306.0 L385.0,509.0 L665.0,306.0 L665.0,925.0 L512.0,793.0 L512.0,602.0 L385.0,697.0 L260.0,602.0 L260.0,790.0 L119.0,900.0 Z" fill="#FFFFFF" opacity=".16" filter="url(#mp-haloM)"/>
+      <path d="M119.0,306.0 L385.0,509.0 L665.0,306.0 L665.0,925.0 L512.0,793.0 L512.0,602.0 L385.0,697.0 L260.0,602.0 L260.0,790.0 L119.0,900.0 Z" fill="url(#mp-mBase)"/>
+      <path d="M119.0,306.0 L385.0,509.0 L384.8,527.7 L134.0,336.3 Z" fill="#FFFFFF" opacity="0.29"/>
+      <path d="M385.0,509.0 L665.0,306.0 L650.0,335.4 L384.8,527.7 Z" fill="#FFFFFF" opacity="0.90"/>
+      <path d="M665.0,306.0 L665.0,925.0 L650.0,892.2 L650.0,335.4 Z" fill="#05030A" opacity="0.19"/>
+      <path d="M665.0,925.0 L512.0,793.0 L527.0,786.1 L650.0,892.2 Z" fill="#05030A" opacity="0.09"/>
+      <path d="M512.0,793.0 L512.0,602.0 L527.0,572.0 L527.0,786.1 Z" fill="#FFFFFF" opacity="0.50"/>
+      <path d="M512.0,602.0 L385.0,697.0 L385.1,678.2 L527.0,572.0 Z" fill="#05030A" opacity="0.34"/>
+      <path d="M385.0,697.0 L260.0,602.0 L245.0,571.8 L385.1,678.2 Z" fill="#05030A" opacity="0.11"/>
+      <path d="M260.0,602.0 L260.0,790.0 L245.0,782.7 L245.0,571.8 Z" fill="#05030A" opacity="0.19"/>
+      <path d="M260.0,790.0 L119.0,900.0 L134.0,869.3 L245.0,782.7 Z" fill="#05030A" opacity="0.34"/>
+      <path d="M119.0,900.0 L119.0,306.0 L134.0,336.3 L134.0,869.3 Z" fill="#FFFFFF" opacity="0.50"/>
+      <path d="M134.0,336.3 L384.8,527.7 L650.0,335.4 L650.0,892.2 L527.0,786.1 L527.0,572.0 L385.1,678.2 L245.0,571.8 L245.0,782.7 L134.0,869.3 Z" fill="url(#mp-mFace)"/>
+      <rect x="385" y="300" width="290" height="640" fill="url(#mp-mPli)" clip-path="url(#mp-clipM)"/>
+      <path d="M385,528 V678" stroke="#FFFFFF" stroke-width="2.5" opacity=".9"/>
+      <path d="M665.0,304.0 L860.0,304.0 L1090.0,446.0 L1114.7,462.9 L1135.6,481.0 L1152.6,500.4 L1165.9,520.9 L1175.4,542.7 L1181.1,565.8 L1183.0,590.0 L1181.7,612.6 L1177.7,633.4 L1171.1,652.6 L1161.8,670.0 L1149.8,685.7 L1135.2,699.7 L1118.0,712.0 L685.0,981.0 L685.0,812.0 L982.0,605.0 L665.0,378.0 Z" fill="url(#mp-dBase)"/>
+      <path d="M665.0,304.0 L860.0,304.0 L856.6,316.0 L677.0,316.0 Z" fill="#FFFFFF" opacity="0.60"/>
+      <path d="M860.0,304.0 L1090.0,446.0 L1083.5,456.1 L856.6,316.0 Z" fill="#FFFFFF" opacity="0.30"/>
+      <path d="M1090.0,446.0 L1114.7,462.9 L1107.3,472.4 L1083.5,456.1 Z" fill="#FFFFFF" opacity="0.27"/>
+      <path d="M1114.7,462.9 L1135.6,481.0 L1127.1,489.6 L1107.3,472.4 Z" fill="#FFFFFF" opacity="0.19"/>
+      <path d="M1135.6,481.0 L1152.6,500.4 L1143.0,507.6 L1127.1,489.6 Z" fill="#FFFFFF" opacity="0.10"/>
+      <path d="M1165.9,520.9 L1175.4,542.7 L1164.0,546.6 L1155.3,526.6 Z" fill="#05030A" opacity="0.05"/>
+      <path d="M1175.4,542.7 L1181.1,565.8 L1169.2,567.7 L1164.0,546.6 Z" fill="#05030A" opacity="0.09"/>
+      <path d="M1181.1,565.8 L1183.0,590.0 L1171.0,590.1 L1169.2,567.7 Z" fill="#05030A" opacity="0.13"/>
+      <path d="M1183.0,590.0 L1181.7,612.6 L1169.7,611.1 L1171.0,590.1 Z" fill="#05030A" opacity="0.16"/>
+      <path d="M1181.7,612.6 L1177.7,633.4 L1166.1,630.3 L1169.7,611.1 Z" fill="#05030A" opacity="0.19"/>
+      <path d="M1177.7,633.4 L1171.1,652.6 L1160.0,647.8 L1166.1,630.3 Z" fill="#05030A" opacity="0.22"/>
+      <path d="M1171.1,652.6 L1161.8,670.0 L1151.6,663.5 L1160.0,647.8 Z" fill="#05030A" opacity="0.24"/>
+      <path d="M1161.8,670.0 L1149.8,685.7 L1140.9,677.7 L1151.6,663.5 Z" fill="#05030A" opacity="0.26"/>
+      <path d="M1149.8,685.7 L1135.2,699.7 L1127.6,690.4 L1140.9,677.7 Z" fill="#05030A" opacity="0.27"/>
+      <path d="M1135.2,699.7 L1118.0,712.0 L1111.3,702.0 L1127.6,690.4 Z" fill="#05030A" opacity="0.27"/>
+      <path d="M1118.0,712.0 L685.0,981.0 L697.0,959.4 L1111.3,702.0 Z" fill="#05030A" opacity="0.27"/>
+      <path d="M685.0,981.0 L685.0,812.0 L697.0,818.3 L697.0,959.4 Z" fill="#FFFFFF" opacity="0.40"/>
+      <path d="M685.0,812.0 L982.0,605.0 L1002.8,605.1 L697.0,818.3 Z" fill="#FFFFFF" opacity="0.72"/>
+      <path d="M982.0,605.0 L665.0,378.0 L677.0,371.8 L1002.8,605.1 Z" fill="#05030A" opacity="0.10"/>
+      <path d="M665.0,378.0 L665.0,304.0 L677.0,316.0 L677.0,371.8 Z" fill="#FFFFFF" opacity="0.40"/>
+      <path d="M677.0,316.0 L856.6,316.0 L1083.5,456.1 L1107.3,472.4 L1127.1,489.6 L1143.0,507.6 L1155.3,526.6 L1164.0,546.6 L1169.2,567.7 L1171.0,590.1 L1169.7,611.1 L1166.1,630.3 L1160.0,647.8 L1151.6,663.5 L1140.9,677.7 L1127.6,690.4 L1111.3,702.0 L697.0,959.4 L697.0,818.3 L1002.8,605.1 L677.0,371.8 Z" fill="url(#mp-dFace)"/>
+      <path d="M860,304 L1090,446 Q1183,503 1183,590 Q1183,672 1118,712" fill="none" style="stroke: var(--accent-3)" stroke-width="9" opacity=".85" filter="url(#mp-lueur)"/>
+      <path d="M860,304 L1090,446 Q1183,503 1183,590 Q1183,672 1118,712" fill="none" stroke="#FFFFFF" stroke-width="2" opacity=".55"/>
+      <path d="M665,378 L982,605 L685,812" fill="none" style="stroke: var(--accent-3)" stroke-width="8" opacity=".8" filter="url(#mp-lueur)"/>
+      <path d="M665,378 L982,605 L685,812" fill="none" stroke="#FFFFFF" stroke-width="1.6" opacity=".5"/>
+      <path d="M708.0,500.0 L858.0,607.0 L708.0,712.0 Z" fill="url(#mp-dBase)"/>
+      <path d="M708.0,500.0 L858.0,607.0 L842.4,606.9 L717.0,517.5 Z" fill="#FFFFFF" opacity="0.22"/>
+      <path d="M858.0,607.0 L708.0,712.0 L717.0,694.7 L842.4,606.9 Z" fill="#05030A" opacity="0.24"/>
+      <path d="M708.0,712.0 L708.0,500.0 L717.0,517.5 L717.0,694.7 Z" fill="#FFFFFF" opacity="0.35"/>
+      <path d="M717.0,517.5 L842.4,606.9 L717.0,694.7 Z" fill="url(#mp-dFace)"/>
+    </symbol>
+    <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="12.5" rx="1.4"/><path d="M7 20.5h10M10 16.5l-.5 4M14 16.5l.5 4"/></symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#direct" aria-label="Mega Player, retour au début">
+      <svg viewBox="59 244 1184 797" aria-hidden="true"><use href="#mp-mono"/></svg>
+      <span>MEGA PLAYER</span>
+    </a>
+    <span class="osd-ch" id="osd-ch" aria-hidden="true">CH 101 · EN DIRECT</span>
+    <nav class="nav" aria-label="Sections">
+      <a href="#vues">4 vues</a>
+      <a href="#alaune">À la une</a>
+      <a href="#images">En images</a>
+      <a href="#tarifs">Tarifs</a>
+      <a href="#questions">Questions</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="zap" aria-label="Changer de section">
+      <button type="button" id="ch-moins" aria-label="Section précédente">CH −</button>
+      <button type="button" id="ch-plus" aria-label="Section suivante">CH +</button>
+    </div>
+    <a class="btn btn-accent" href="#fichiers">Télécharger</a>
+  </div>
+</header>
+
+<main>
+  <section class="onair" id="direct" data-ch="101" data-name="EN DIRECT">
+    <canvas class="city" aria-hidden="true"></canvas>
+    <div class="onair-shade"></div>
+    <div class="wrap osd-wrap">
+      <div class="bug" aria-hidden="true"><svg viewBox="59 244 1184 797"><use href="#mp-mono"/></svg><span>MEGA PLAYER</span></div>
+      <div class="osd">
+        <div class="osd-top">
+          <span class="chnum">101</span>
+          <span class="chname">MEGA PLAYER</span>
+          <span class="livep"><i></i>EN DIRECT</span>
+          <span class="clock">20:47</span>
+        </div>
+        <h1>Toute votre télé,<br><em>sur tous vos écrans.</em></h1>
+        <p class="osd-desc">La TV en direct en quatre vues, le replay, les films et séries, Nuvio, les sites En ligne, votre Collection et le sport. Une seule appli pour la box Android TV, le téléphone et le PC, pensée pour la télécommande.</p>
+        <div class="osd-progress mono" aria-hidden="true"><span>20:30</span><div class="track"><i style="width:19%"></i></div><span>22:00</span></div>
+        <div class="osd-bottom">
+          <p class="next"><span class="mono">À SUIVRE</span>Ce soir : les quatre vues du direct, Nuvio, En ligne, la Collection et le sport.</p>
+          <div class="ctas"><a class="btn btn-accent" href="#fichiers">Télécharger</a><a class="btn btn-line" href="#programme">Voir le programme</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="crawl">
+    <div class="wrap">
+      <b>EN BREF</b>
+      <ul>
+        <li>Xtream Codes, Stalker, M3U, Enigma2</li>
+        <li>Box, téléphone et PC</li>
+        <li>Nuvio intégré</li>
+        <li>En ligne (FR)</li>
+        <li>Essai gratuit 3 jours</li>
+        <li>13 langues</li>
+      </ul>
+    </div>
+  </div>
+
+  <section class="sec" id="programme" data-ch="102" data-name="PROGRAMME">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>102</b><span class="lbl">Programme</span></div>
+        <div>
+          <h2>Ce soir sur<br>Mega Player</h2>
+          <p class="lede">Toutes les fonctions, présentées comme vos chaînes dans le guide. Choisissez un programme pour le détail, à la souris ou aux flèches du clavier, comme avec la télécommande.</p>
+        </div>
+      </div>
+
+      <div class="epg">
+        <div class="epg-info">
+          <div>
+            <p class="k" id="epg-k">CH 1 · DIRECT · 20:00 – 21:00 · EN DIRECT</p>
+            <h3 id="epg-t">Quatre vues</h3>
+            <p class="d" id="epg-d" aria-live="polite">Liste, guide des programmes, grille ou guide en images : vous choisissez la vue, elle est gardée. L'aperçu continue pendant que vous parcourez les chaînes.</p>
+          </div>
+          <p class="hint"><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> pour naviguer<br><kbd>OK</kbd> pour choisir</p>
+        </div>
+        <div class="epg-body">
+          <div class="epg-head" aria-hidden="true">
+            <span class="day">VEN. 16 OCT.</span>
+            <div class="epg-times"><span style="left:0%">20:00</span><span style="left:12.5%">20:30</span><span style="left:25%">21:00</span><span style="left:37.5%">21:30</span><span style="left:50%">22:00</span><span style="left:62.5%">22:30</span><span style="left:75%">23:00</span><span style="left:87.5%">23:30</span></div>
+          </div>
+
+          <div class="epg-row">
+            <div class="epg-ch"><b>1</b><span>Direct</span></div>
+            <div class="epg-track">
+              <button class="cell live" type="button" aria-pressed="true" style="--s:0;--w:25" data-s="0" data-k="CH 1 · DIRECT · 20:00 – 21:00 · EN DIRECT"><span class="t">20:00 – 21:00<em>EN DIRECT</em></span><span class="n">Quatre vues</span><span class="s">Liste, guide, grille, en images.</span><span class="more">Liste, guide des programmes, grille ou guide en images : vous choisissez la vue, elle est gardée. L'aperçu continue pendant que vous parcourez les chaînes.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:25;--w:18.75" data-s="25" data-k="CH 1 · DIRECT · 21:00 – 21:45"><span class="t">21:00 – 21:45</span><span class="n">Replay</span><span class="s">La semaine passée, à la demande.</span><span class="more">Un programme passé se relance d'un OK depuis le guide, quand votre serveur garde les archives. Pause, retour en arrière et retour au direct quand le flux le permet.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:43.75;--w:25" data-s="43.75" data-k="CH 1 · DIRECT · 21:45 – 22:45"><span class="t">21:45 – 22:45</span><span class="n">Enregistrement</span><span class="s">Tout de suite ou depuis le guide.</span><span class="more">Enregistrement immédiat ou programmé avec des marges, même appli fermée et après un redémarrage de la box, avec un rappel avant le début du programme.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:68.75;--w:31.25" data-s="68.75" data-k="CH 1 · DIRECT · 22:45 – 00:00"><span class="t">22:45 – 00:00</span><span class="n">Multi-Vue</span><span class="s">Jusqu'à quatre chaînes à l'écran.</span><span class="more">Une chaîne par écran, chacune sur le serveur de votre choix. Le son suit l'écran sélectionné.</span></button>
+            </div>
+          </div>
+
+          <div class="epg-row">
+            <div class="epg-ch"><b>2</b><span>Cinéma</span></div>
+            <div class="epg-track">
+              <button class="cell live" type="button" aria-pressed="false" tabindex="-1" style="--s:0;--w:31.25" data-s="0" data-k="CH 2 · CINÉMA · 20:00 – 21:15 · EN DIRECT"><span class="t">20:00 – 21:15<em>EN DIRECT</em></span><span class="n">Films et séries</span><span class="s">Fiches complètes, reprise au bon épisode.</span><span class="more">Bandes-annonces, casting, saga et plateformes. Les épisodes vus sont marqués, l'intro et le générique se passent d'un bouton.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:31.25;--w:25" data-s="31.25" data-k="CH 2 · CINÉMA · 21:15 – 22:15"><span class="t">21:15 – 22:15</span><span class="n">Nuvio</span><span class="s">Vos addons et vos collections.</span><span class="more">Catalogues, collections et profils Nuvio dans la même appli, avec le suivi Trakt et Simkl.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:56.25;--w:25" data-s="56.25" data-k="CH 2 · CINÉMA · 22:15 – 23:15"><span class="t">22:15 – 23:15</span><span class="n">Image et son</span><span class="s">Dolby Vision, HDR, Dolby et DTS.</span><span class="more">Trois moteurs de lecture, réglages Dolby Vision, pistes audio et sous-titres OpenSubtitles. Sur PC, le lecteur MaxVR affine l'image.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:81.25;--w:18.75" data-s="81.25" data-k="CH 2 · CINÉMA · 23:15 – 00:00"><span class="t">23:15 – 00:00</span><span class="n">En ligne</span><span class="s">Sites français, sans serveur.</span><span class="more">Plus de vingt sites français de films, séries, animés et chaînes TV, réunis dans l'appli, avec une recherche sur tous les sites.</span></button>
+            </div>
+          </div>
+
+          <div class="epg-row">
+            <div class="epg-ch"><b>3</b><span>Maison</span></div>
+            <div class="epg-track">
+              <button class="cell live" type="button" aria-pressed="false" tabindex="-1" style="--s:0;--w:37.5" data-s="0" data-k="CH 3 · MAISON · 20:00 – 21:30 · EN DIRECT"><span class="t">20:00 – 21:30<em>EN DIRECT</em></span><span class="n">Collection</span><span class="s">Votre médiathèque façon Plex.</span><span class="more">Le PC ou la box range vos films et séries avec affiches et résumés, et les sert à toute la maison, chez vous comme en vacances. NAS et Freebox compris.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:37.5;--w:18.75" data-s="37.5" data-k="CH 3 · MAISON · 21:30 – 22:15"><span class="t">21:30 – 22:15</span><span class="n">Téléchargements</span><span class="s">Pour regarder hors-ligne.</span><span class="more">Films, épisodes et replays, vers le téléphone, une clé USB, un NAS ou la Freebox, avec reprise après une coupure.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:56.25;--w:25" data-s="56.25" data-k="CH 3 · MAISON · 22:15 – 23:15"><span class="t">22:15 – 23:15</span><span class="n">Profils et foyer</span><span class="s">Chacun ses reprises et ses favoris.</span><span class="more">«&nbsp;Qui regarde&nbsp;?&nbsp;» au démarrage, favoris et reprises partagés entre la box et les téléphones, temps d'écran et code parental.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:81.25;--w:18.75" data-s="81.25" data-k="CH 3 · MAISON · 23:15 – 00:00"><span class="t">23:15 – 00:00</span><span class="n">Télécommande</span><span class="s">Le téléphone pilote la box.</span><span class="more">Touches, recherche dans le catalogue de la box, lecture en cours et multi-vue, sur le même Wi-Fi.</span></button>
+            </div>
+          </div>
+
+          <div class="epg-row">
+            <div class="epg-ch"><b>4</b><span>Sport et plus</span></div>
+            <div class="epg-track">
+              <button class="cell live" type="button" aria-pressed="false" tabindex="-1" style="--s:0;--w:25" data-s="0" data-k="CH 4 · SPORT ET PLUS · 20:00 – 21:00 · EN DIRECT"><span class="t">20:00 – 21:00<em>EN DIRECT</em></span><span class="n">Sport</span><span class="s">Direct, scores et replays.</span><span class="more">Matchs en direct, à venir et en replay d'après votre guide, classements et alertes de buts. Vous choisissez la chaîne qui diffuse.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:25;--w:18.75" data-s="25" data-k="CH 4 · SPORT ET PLUS · 21:00 – 21:45"><span class="t">21:00 – 21:45</span><span class="n">Radios du monde</span><span class="s">Rangées par pays.</span><span class="more">Les radios du monde entier à côté de vos chaînes, avec une recherche par nom ou par genre.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:43.75;--w:25" data-s="43.75" data-k="CH 4 · SPORT ET PLUS · 21:45 – 22:45"><span class="t">21:45 – 22:45</span><span class="n">Commande vocale</span><span class="s">Parlez, la box exécute.</span><span class="more">Au micro de la télécommande, ou «&nbsp;Ok Mega Player&nbsp;» en mains libres sur le téléphone, pour lancer une chaîne, chercher un film ou mettre en pause.</span></button>
+              <button class="cell" type="button" aria-pressed="false" tabindex="-1" style="--s:68.75;--w:31.25" data-s="68.75" data-k="CH 4 · SPORT ET PLUS · 22:45 – 00:00"><span class="t">22:45 – 00:00</span><span class="n">Votre style</span><span class="s">56 couleurs, 16 thèmes animés.</span><span class="more">Couleur d'accent, thèmes animés, fond perso, noir OLED, 13 langues et votre propre intro vidéo.</span></button>
+            </div>
+          </div>
+          <div class="nowline" aria-hidden="true"><span>20:47</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="vues" data-ch="103" data-name="4 VUES">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>103</b><span class="lbl">4 vues</span></div>
+        <div>
+          <h2>Le direct<br>en quatre vues</h2>
+          <p class="lede">Sur la box comme sur le téléphone, choisissez comment parcourir vos chaînes. La vue choisie est gardée, et l'aperçu continue pendant que vous zappez.</p>
+        </div>
+      </div>
+      <div class="vues">
+        <div class="vue-tabs" role="tablist" aria-label="Vues du direct">
+          <button type="button" role="tab" aria-selected="true" aria-controls="vue-stage" data-box="captures/vue-images.webp" data-tel="captures/m-images.webp" data-name="Guide en images" data-desc="Les programmes en images, chaîne par chaîne, avec le direct en premier. Sur la box, la flèche gauche remonte jusqu'à trois jours pour le replay.">Guide en images</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="vue-stage" tabindex="-1" data-box="captures/vue-liste.webp" data-tel="captures/m-liste.webp" data-name="Liste" data-desc="Numéro, logo et programme en cours avec sa progression. Au centre, la journée de la chaîne choisie, avec le replay sur les programmes passés, et à droite la fiche du programme.">Liste</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="vue-stage" tabindex="-1" data-box="captures/vue-grille.webp" data-tel="captures/m-mosaique.webp" data-name="Grille" data-desc="Une tuile par chaîne avec l'image du programme en cours et sa progression. Sur le téléphone, c'est la mosaïque.">Grille</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="vue-stage" tabindex="-1" data-box="captures/vue-guide.webp" data-tel="captures/m-guide.webp" data-name="Guide" data-desc="La grille des programmes, avec le direct en fond. Le programme choisi s'ouvre dans la grille avec son résumé, et un programme passé se relance en replay d'un OK.">Guide</button>
+        </div>
+        <div class="vue-stage" id="vue-stage" role="tabpanel">
+          <figure class="vshot"><figcaption>Box Android TV</figcaption><div class="tvshot"><img id="vue-box" src="captures/vue-images.webp" width="1280" height="683" alt="Vue Guide en images du direct sur la box"></div></figure>
+          <figure class="vshot"><figcaption>Téléphone</figcaption><div class="telshot"><img id="vue-tel" src="captures/m-images.webp" width="600" height="1300" alt="Vue Guide en images du direct sur le téléphone"></div></figure>
+        </div>
+        <p class="vue-desc" id="vue-desc" aria-live="polite">Les programmes en images, chaîne par chaîne, avec le direct en premier. Sur la box, la flèche gauche remonte jusqu'à trois jours pour le replay.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="alaune" data-ch="104" data-name="À LA UNE">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>104</b><span class="lbl">À la une</span></div>
+        <div>
+          <h2>Les grands<br>programmes</h2>
+          <p class="lede">Nuvio, les sites En ligne, votre Collection et le sport, sur la box ou le PC et sur le téléphone.</p>
+        </div>
+      </div>
+      <div class="spots">
+        <article class="spot">
+          <div class="spot-txt">
+            <p class="spot-k">Nuvio</p>
+            <h3>Nuvio, intégré</h3>
+            <p>Votre compte Nuvio dans Mega Player, avec ses addons, ses collections et ses profils, sans changer d'appli.</p>
+            <ul class="ticks2">
+              <li><span>Vos addons et leurs catalogues, sur l'accueil.</span></li>
+              <li><span>Collections et dossiers, synchronisés par profil.</span></li>
+              <li><span>Les profils de votre compte, jusqu'à six.</span></li>
+              <li><span>Choix de la source, ou lecture automatique du meilleur flux.</span></li>
+              <li><span>Passer l'intro, épisode suivant automatique, suivi Trakt et Simkl.</span></li>
+            </ul>
+          </div>
+          <div class="duo">
+            <figure class="tvshot"><img src="captures/nuvio.webp" width="1280" height="682" loading="lazy" alt="Collections Nuvio sur la box"></figure>
+            <figure class="telshot"><img src="captures/m-nuvio.webp" width="600" height="1300" loading="lazy" alt="Accueil Nuvio sur le téléphone"></figure>
+          </div>
+        </article>
+
+        <article class="spot">
+          <div class="spot-txt">
+            <p class="spot-k">En ligne (FR)</p>
+            <h3>Les sites français, réunis</h3>
+            <p>Plus de vingt sites français de films, séries, animés et chaînes TV, dans une seule appli. Pas besoin de serveur IPTV, de PC ni de NAS.</p>
+            <ul class="ticks2">
+              <li><span>Recherche sur tous les sites à la fois.</span></li>
+              <li><span>Lecture automatique de la meilleure source, en VF d'abord.</span></li>
+              <li><span>Saisons, épisodes, casting et filmographies.</span></li>
+              <li><span>Reprise de lecture et favoris.</span></li>
+              <li><span>Qualité au choix, de 480p à 1080p.</span></li>
+            </ul>
+          </div>
+          <div class="duo">
+            <figure class="tvshot"><img src="captures/en-ligne.webp" width="1280" height="622" loading="lazy" alt="Les sites de En ligne (FR) sur le PC"></figure>
+            <figure class="telshot"><img src="captures/m-enligne.webp" width="600" height="1300" loading="lazy" alt="En ligne (FR) sur le téléphone, avec les reprises"></figure>
+          </div>
+        </article>
+
+        <article class="spot">
+          <div class="spot-txt">
+            <p class="spot-k">Collection</p>
+            <h3>Votre médiathèque</h3>
+            <p>Vos films et séries rangés façon Plex, servis par le PC ou la box à toute la maison.</p>
+            <ul class="ticks2">
+              <li><span>Affiches, résumés, casting et sagas, en français.</span></li>
+              <li><span>4K, HDR et Dolby Vision repérés, plusieurs versions par film.</span></li>
+              <li><span>Box, téléphones et PC du foyer, avec reprise partagée.</span></li>
+              <li><span>À distance, chez vous comme en vacances.</span></li>
+              <li><span>NAS, Freebox et invitations pour vos proches.</span></li>
+            </ul>
+          </div>
+          <div class="duo">
+            <figure class="tvshot"><img src="captures/collection.webp" width="1280" height="684" loading="lazy" alt="La Collection sur le PC"></figure>
+            <figure class="telshot"><img src="captures/m-collection.webp" width="600" height="1300" loading="lazy" alt="La Collection sur le téléphone"></figure>
+          </div>
+        </article>
+
+        <article class="spot">
+          <div class="spot-txt">
+            <p class="spot-k">Sport</p>
+            <h3>Le sport en direct</h3>
+            <p>Un hub construit à partir du guide de vos serveurs, avec les scores en direct.</p>
+            <ul class="ticks2">
+              <li><span>Football, tennis, rugby, basket : en direct, à venir et en replay.</span></li>
+              <li><span>Scores mis à jour chaque minute.</span></li>
+              <li><span>Classements, buteurs et effectifs.</span></li>
+              <li><span>«&nbsp;Regarder sur…&nbsp;» : la chaîne qui diffuse, tous serveurs confondus.</span></li>
+              <li><span>Alertes de buts et clubs suivis.</span></li>
+            </ul>
+          </div>
+          <div class="duo">
+            <figure class="tvshot"><img src="captures/sport.webp" width="1280" height="684" loading="lazy" alt="Le hub Sport avec un match en direct"></figure>
+            <figure class="telshot"><img src="captures/m-sport.webp" width="600" height="1300" loading="lazy" alt="Le hub Sport sur le téléphone"></figure>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="images" data-ch="105" data-name="EN IMAGES">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>105</b><span class="lbl">En images</span></div>
+        <div>
+          <h2>Zappez<br>dans l'appli</h2>
+          <p class="lede">Des captures de Mega Player sur la box et le PC. Choisissez une chaîne dans la liste, ou zappez avec les flèches.</p>
+        </div>
+      </div>
+      <div class="zg">
+        <div class="zg-screen">
+          <figure class="tvshot"><img id="zg-img" src="captures/a-la-une.webp" width="1280" height="678" loading="lazy" alt="« À la une » du direct sur la box"></figure>
+          <div class="zg-osd" aria-live="polite">
+            <span class="chnum" id="zg-num">1</span>
+            <b id="zg-name">À la une</b>
+            <p id="zg-desc">Le direct « À la une » : la chaîne mise en avant, vos rangées perso et les chaînes les plus vues sur Mega Player.</p>
+          </div>
+        </div>
+        <div>
+          <div class="zg-list" role="tablist" aria-label="Captures">
+            <button type="button" role="tab" aria-selected="true" data-src="captures/a-la-une.webp" data-alt="« À la une » du direct sur la box" data-desc="Le direct « À la une » : la chaîne mise en avant, vos rangées perso et les chaînes les plus vues sur Mega Player."><span>1</span>À la une</button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-src="captures/films.webp" data-alt="Le catalogue des films sur la box" data-desc="Le catalogue des films, rangé par catégories, avec la fiche du titre sélectionné en haut de l'écran."><span>2</span>Films</button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-src="captures/fiche.webp" data-alt="La fiche d'un film sur la box" data-desc="La fiche d'un film : note, réalisation, plateformes, versions, téléchargement et bandes-annonces."><span>3</span>Fiche film</button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-src="captures/sports.webp" data-alt="Tous les sports et les matchs en direct" data-desc="Tous les sports, et les matchs en direct avec la chaîne qui les diffuse."><span>4</span>Tous les sports</button>
+            <button type="button" role="tab" aria-selected="false" tabindex="-1" data-src="captures/temps-ecran.webp" data-alt="L'écran Temps d'écran" data-desc="Le temps d'écran : limite quotidienne, plage interdite et statistiques par profil."><span>5</span>Temps d'écran</button>
+          </div>
+          <p class="zg-hint">↑ ↓ pour zapper</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="ecrans" data-ch="106" data-name="ÉCRANS">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>106</b><span class="lbl">Écrans</span></div>
+        <div>
+          <h2>Trois écrans,<br>une appli</h2>
+          <p class="lede">La même appli sur la box, le téléphone et le PC, avec ce que chaque appareil fait de mieux. Vos reprises et vos favoris vous suivent de l'un à l'autre.</p>
+        </div>
+      </div>
+      <div class="screens3">
+        <article class="dev">
+          <div class="devshot"><figure class="tvshot"><img src="captures/accueil.webp" width="1280" height="684" loading="lazy" alt="L'accueil de Mega Player sur la box"></figure></div>
+          <h3>Box Android TV</h3>
+          <p class="sub">La télé complète, à la télécommande.</p>
+          <ul>
+            <li>Enregistrement et rappels, même appli fermée</li>
+            <li>Multi-Vue jusqu'à quatre chaînes</li>
+            <li>Dolby Vision et HDR</li>
+            <li>Vos reprises sur l'accueil Android TV</li>
+          </ul>
+        </article>
+        <article class="dev">
+          <div class="devshot"><figure class="telshot"><img src="captures/m-accueil.webp" width="600" height="1300" loading="lazy" alt="L'accueil de Mega Player sur le téléphone"></figure></div>
+          <h3>Téléphone Android</h3>
+          <p class="sub">Le catalogue dans la poche, la box au bout des doigts.</p>
+          <ul>
+            <li>Télécommande et «&nbsp;Ok Mega Player&nbsp;»</li>
+            <li>Diffusion vers Chromecast, DLNA ou la box</li>
+            <li>Téléchargements pour regarder hors-ligne</li>
+            <li>Image dans l'image</li>
+          </ul>
+        </article>
+        <article class="dev">
+          <div class="devshot"><figure class="tvshot pcshot"><img src="captures/streamflix.webp" width="1280" height="678" loading="lazy" alt="StreamFlix dans En ligne, sur le PC"></figure></div>
+          <h3>PC Windows</h3>
+          <p class="sub">Le serveur vidéo de la maison.</p>
+          <ul>
+            <li>Vos disques deviennent une médiathèque</li>
+            <li>Partagée avec les box et les téléphones</li>
+            <li>MaxVR PC pour affiner l'image</li>
+            <li>Clavier, souris et NAS Windows</li>
+          </ul>
+        </article>
+      </div>
+
+      <h3 class="strip-h">Sur le téléphone</h3>
+      <div class="phones" tabindex="0" aria-label="Captures du téléphone, à faire défiler">
+        <figure class="ph"><div class="telshot"><img src="captures/m-series.webp" width="600" height="1300" loading="lazy" alt="L'onglet Séries sur le téléphone"></div><figcaption>Séries</figcaption></figure>
+        <figure class="ph"><div class="telshot"><img src="captures/m-serie-fiche.webp" width="600" height="1300" loading="lazy" alt="La fiche d'une série sur le téléphone"></div><figcaption>Fiche série</figcaption></figure>
+        <figure class="ph"><div class="telshot"><img src="captures/m-serie-saisons.webp" width="600" height="1300" loading="lazy" alt="Casting, bandes-annonces et épisodes d'une série"></div><figcaption>Saisons et épisodes</figcaption></figure>
+        <figure class="ph"><div class="telshot"><img src="captures/m-fiche.webp" width="600" height="1300" loading="lazy" alt="La fiche d'un film sur le téléphone"></div><figcaption>Fiche film</figcaption></figure>
+        <figure class="ph"><div class="telshot"><img src="captures/m-casting.webp" width="600" height="1300" loading="lazy" alt="Casting et bandes-annonces d'un film"></div><figcaption>Casting</figcaption></figure>
+        <figure class="ph"><div class="telshot"><img src="captures/m-sports.webp" width="600" height="1300" loading="lazy" alt="Tennis, rugby et basket dans le hub Sport"></div><figcaption>Tous les sports</figcaption></figure>
+        <figure class="ph"><div class="telshot"><img src="captures/m-temps.webp" width="600" height="1300" loading="lazy" alt="Le temps d'écran sur le téléphone"></div><figcaption>Temps d'écran</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="couleur" data-ch="107" data-name="COULEUR">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>107</b><span class="lbl">Couleur</span></div>
+        <div>
+          <h2>À votre<br>couleur</h2>
+          <p class="lede">Dans Mega Player, le logo, l'icône de l'appli et toute l'interface prennent la couleur que vous choisissez.</p>
+        </div>
+      </div>
+      <div class="colorbox">
+        <div class="bigmark" aria-hidden="true"><svg viewBox="59 244 1184 797"><use href="#mp-mono"/></svg><span>MEGA PLAYER</span></div>
+        <div>
+          <h3>Essayez sur cette page</h3>
+          <p class="txt">Choisissez une couleur : le logo, les boutons et le guide changent avec elle, comme dans l'appli.</p>
+          <div class="swatches" role="radiogroup" aria-label="Couleur d'accent">
+            <button class="sw" type="button" role="radio" aria-checked="true" data-acc="violet" style="--sw:#7A2CFF"><i></i>Violet</button>
+            <button class="sw" type="button" role="radio" aria-checked="false" data-acc="or" style="--sw:#F2B544"><i></i>Or Mega</button>
+            <button class="sw" type="button" role="radio" aria-checked="false" data-acc="rouge" style="--sw:#FF2D3F"><i></i>Rouge</button>
+            <button class="sw" type="button" role="radio" aria-checked="false" data-acc="ocean" style="--sw:#2F9BEA"><i></i>Océan</button>
+            <button class="sw" type="button" role="radio" aria-checked="false" data-acc="emeraude" style="--sw:#27C46B"><i></i>Émeraude</button>
+          </div>
+          <ul class="facts">
+            <li><b>56</b><span>couleurs d'accent</span></li>
+            <li><b>16</b><span>thèmes animés</span></li>
+            <li><b>13</b><span>langues</span></li>
+            <li><b>OLED</b><span>noir pur</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="fiche" data-ch="108" data-name="FICHE TECHNIQUE">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>108</b><span class="lbl">Fiche technique</span></div>
+        <div>
+          <h2>Ce qu'il y a<br>dedans</h2>
+          <p class="lede">Les formats, les appareils, et ce qui change d'un écran à l'autre.</p>
+        </div>
+      </div>
+      <dl class="specs">
+        <div><dt>Serveurs</dt><span class="lead"></span><dd>Xtream Codes, Stalker, M3U, Enigma2</dd></div>
+        <div><dt>Box</dt><span class="lead"></span><dd>Android TV et Google TV, Android 6.0+</dd></div>
+        <div><dt>Téléphone</dt><span class="lead"></span><dd>Android 6.0+</dd></div>
+        <div><dt>PC</dt><span class="lead"></span><dd>Windows 64 bits, DirectX 11</dd></div>
+        <div><dt>Image</dt><span class="lead"></span><dd>4K, HDR, Dolby Vision</dd></div>
+        <div><dt>Son</dt><span class="lead"></span><dd>Dolby, DTS</dd></div>
+        <div><dt>Langues</dt><span class="lead"></span><dd>13</dd></div>
+        <div><dt>Abonnement</dt><span class="lead"></span><dd>Non fourni, vous ajoutez vos serveurs</dd></div>
+      </dl>
+      <h3 class="subh">Selon l'écran</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th scope="col">Fonction</th><th scope="col">Box</th><th scope="col">Téléphone</th><th scope="col">PC</th></tr></thead>
+          <tbody>
+            <tr><td>TV en direct, guide en images, replay</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Quatre vues du direct</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Films, séries et Nuvio</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>En ligne (FR)</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Hub Sport</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Regarder la Collection</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Servir sa médiathèque au foyer</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="no"></span><span class="sr">Non</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Enregistrement</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="no"></span><span class="sr">Non</span></td><td class="p">Appli ouverte</td></tr>
+            <tr><td>Multi-Vue</td><td><span class="yes"></span><span class="sr">Oui</span></td><td class="p">Pilote celle de la box</td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Téléchargements hors-ligne</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Diffusion Chromecast et DLNA</td><td><span class="no"></span><span class="sr">Non</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="no"></span><span class="sr">Non</span></td></tr>
+            <tr><td>Télécommande de la box</td><td><span class="no"></span><span class="sr">Non</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="no"></span><span class="sr">Non</span></td></tr>
+            <tr><td>Commande vocale</td><td class="p">Micro de la télécommande</td><td class="p">Mains libres</td><td class="p">Au clavier</td></tr>
+            <tr><td>Image dans l'image</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="no"></span><span class="sr">Non</span></td></tr>
+            <tr><td>Dolby Vision</td><td><span class="yes"></span><span class="sr">Oui</span></td><td class="p">HDR</td><td class="p">Profil 5, avec MaxVR</td></tr>
+            <tr><td>Thèmes animés</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="no"></span><span class="sr">Non</span></td></tr>
+            <tr><td>Profils et temps d'écran</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Code parental</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="no"></span><span class="sr">Non</span></td><td><span class="yes"></span><span class="sr">Oui</span></td></tr>
+            <tr><td>Mises à jour automatiques</td><td><span class="yes"></span><span class="sr">Oui</span></td><td><span class="yes"></span><span class="sr">Oui</span></td><td class="p">Installeur à relancer</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">Le replay dépend de votre serveur. L'enregistrement demande de l'espace de stockage, et la Multi-Vue autant de connexions que de chaînes affichées.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="tarifs" data-ch="109" data-name="TARIFS">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>109</b><span class="lbl">Tarifs</span></div>
+        <div>
+          <h2>Choisissez<br>la durée</h2>
+          <p class="lede">Chaque clé ouvre toute l'appli et ses mises à jour, sur un appareil. Commencez par trois jours gratuits.</p>
+        </div>
+      </div>
+      <p class="track-title">Box Android TV ou téléphone · 1 appareil</p>
+      <ol class="seek">
+        <li class="chap"><p class="k">Essai</p><p class="dur">3 jours</p><p class="price">Gratuit</p><p class="note">Toutes les fonctions, pour essayer avec vos serveurs.</p></li>
+        <li class="chap"><p class="k">Annuel</p><p class="dur">1 an</p><p class="price">20&nbsp;€</p><p class="note">Toutes les fonctions et les mises à jour pendant un an.</p></li>
+        <li class="chap inf"><p class="k">Définitif</p><p class="dur">À vie</p><p class="price">40&nbsp;€</p><p class="note">Toutes les fonctions et les mises à jour à venir, sans échéance.</p></li>
+      </ol>
+      <div class="pcplan">
+        <svg class="ic" aria-hidden="true"><use href="#i-pc"/></svg>
+        <div>
+          <p class="track-title">PC Windows · 1 appareil</p>
+          <h3>À vie</h3>
+          <p class="note">L'appli PC complète, avec la Collection et MaxVR PC, sans échéance.</p>
+        </div>
+        <p class="price">15&nbsp;€</p>
+      </div>
+      <div class="buy">
+        <p>Pour obtenir une clé, ou réunir plusieurs appareils sur une seule clé, écrivez-nous sur Telegram.</p>
+        <a class="btn btn-accent" href="#contact">Obtenir une clé</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="telecharger" data-ch="110" data-name="DÉMARRER">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>110</b><span class="lbl">Démarrer</span></div>
+        <div>
+          <h2>Trois étapes<br>avant le direct</h2>
+          <p class="lede">Installez l'appli, activez votre clé, puis ajoutez vos serveurs IPTV si vous en avez. Nuvio et En ligne n'en demandent pas.</p>
+        </div>
+      </div>
+      <ol class="steps">
+        <li><span class="n" aria-hidden="true">1</span><h3>Installez</h3><p>Sur la box Android TV, le téléphone Android ou le PC Windows.</p></li>
+        <li><span class="n" aria-hidden="true">2</span><h3>Activez</h3><p>L'appli affiche l'identifiant de l'appareil. Saisissez votre clé : elle se lie à cet appareil.</p></li>
+        <li><span class="n" aria-hidden="true">3</span><h3>Ajoutez vos serveurs</h3><p>Xtream Codes, Stalker, M3U ou Enigma2. Vous pouvez aussi les envoyer depuis le téléphone par QR code.</p></li>
+      </ol>
+      <h3 class="dl-title" id="fichiers">Télécharger l'appli</h3>
+      <div class="dl">
+        <div class="dl-row"><svg class="ic" aria-hidden="true"><use href="#i-tv"/></svg><div><b>Box Android TV</b><span class="req mono">Dernière version · Android TV et Google TV, Android 6.0+ · APK, environ 105 Mo</span><span class="dl-url">https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-Box.apk</span></div><div class="dl-actions"><a class="btn btn-accent" href="https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-Box.apk" target="_blank" rel="noopener">Télécharger</a><button class="btn btn-line" type="button" data-copy="https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-Box.apk">Copier le lien</button></div></div>
+        <div class="dl-row"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg><div><b>Téléphone Android</b><span class="req mono">Dernière version · Android 6.0+ · APK, environ 128 Mo</span><span class="dl-url">https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-Mobile.apk</span></div><div class="dl-actions"><a class="btn btn-accent" href="https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-Mobile.apk" target="_blank" rel="noopener">Télécharger</a><button class="btn btn-line" type="button" data-copy="https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-Mobile.apk">Copier le lien</button></div></div>
+        <div class="dl-row"><svg class="ic" aria-hidden="true"><use href="#i-pc"/></svg><div><b>PC Windows</b><span class="req mono">Dernière version · Windows 64 bits, DirectX 11 · installeur .exe, environ 250 Mo</span><span class="dl-url">https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-PC-Setup.exe</span></div><div class="dl-actions"><a class="btn btn-accent" href="https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-PC-Setup.exe" target="_blank" rel="noopener">Télécharger</a><button class="btn btn-line" type="button" data-copy="https://github.com/yangtresso47-source/mega-player-releases/releases/latest/download/Mega-Player-Public-PC-Setup.exe">Copier le lien</button></div></div>
+      </div>
+      <div class="dl-help">
+        <p><b>Le téléchargement ne démarre pas&nbsp;?</b> Copiez le lien et collez-le dans Chrome. Sur la box, tapez-le dans l'appli Downloader.</p>
+        <p>Sur le téléphone, Chrome peut demander de confirmer le téléchargement d'un fichier APK : acceptez, puis ouvrez le fichier pour l'installer. Android peut aussi demander d'autoriser l'installation depuis Chrome.</p>
+        <p>Les fichiers sont hébergés sur GitHub et les liens donnent toujours la dernière version. L'appli s'installe sous le nom Mega Player Public.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="questions" data-ch="111" data-name="QUESTIONS">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>111</b><span class="lbl">Questions</span></div>
+        <div>
+          <h2>Questions<br>fréquentes</h2>
+          <p class="lede">Une autre question&nbsp;? <a href="#contact">Écrivez-nous sur Telegram.</a></p>
+        </div>
+      </div>
+      <div class="faq">
+        <div>
+          <details open>
+            <summary>Qu'est-ce que Mega Player&nbsp;?</summary>
+            <p>Un lecteur IPTV pour box Android TV, téléphone Android et PC Windows. Il réunit la TV en direct, le replay, les films et séries, Nuvio, les sites En ligne, votre médiathèque et le sport dans une seule appli.</p>
+          </details>
+          <details>
+            <summary>Faut-il un abonnement IPTV&nbsp;?</summary>
+            <p>Pour la TV en direct et le catalogue de votre fournisseur, oui : Mega Player lit les serveurs que vous ajoutez, Xtream Codes, Stalker, M3U ou Enigma2, mais il n'en vend pas. Nuvio et la partie En ligne fonctionnent sans abonnement IPTV.</p>
+          </details>
+          <details>
+            <summary>Sur quels appareils fonctionne-t-il&nbsp;?</summary>
+            <p>Les box et téléviseurs Android TV ou Google TV sous Android 6.0 ou plus récent, les téléphones Android 6.0 ou plus récents, et les PC Windows 64 bits avec une carte graphique DirectX 11.</p>
+          </details>
+          <details>
+            <summary>Une clé peut-elle servir sur plusieurs appareils&nbsp;?</summary>
+            <p>Une clé active un appareil : une box ou un téléphone, ou un PC avec la formule PC. Pour plusieurs appareils, une seule clé groupée peut les réunir : écrivez-nous sur Telegram.</p>
+          </details>
+        </div>
+        <div>
+          <details>
+            <summary>Comment se font les mises à jour&nbsp;?</summary>
+            <p>Sur la box et le téléphone, un bandeau annonce la nouvelle version avec ses nouveautés, puis l'appli se met à jour. Sur PC, la nouvelle version s'installe par-dessus l'ancienne et garde vos réglages.</p>
+          </details>
+          <details>
+            <summary>Puis-je piloter la box depuis mon téléphone&nbsp;?</summary>
+            <p>Oui, sur le même Wi-Fi : touches, recherche dans le catalogue de la box, lecture en cours, multi-vue et commande vocale «&nbsp;Ok Mega Player&nbsp;».</p>
+          </details>
+          <details>
+            <summary>Puis-je regarder mes propres films&nbsp;?</summary>
+            <p>Oui, avec la Collection. Le PC ou la box range vos fichiers façon Plex, avec affiches et résumés, et les sert aux autres appareils du foyer. Les NAS et la Freebox sont pris en charge, et l'accès à distance permet de regarder hors de chez soi.</p>
+          </details>
+          <details>
+            <summary>Comment obtenir une clé&nbsp;?</summary>
+            <p>Écrivez-nous sur Telegram, à @Forza11308 ou @KUQEZI05. Vous recevez votre clé, à saisir dans l'appli : elle se lie à l'appareil. L'essai gratuit dure trois jours.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="contact" data-ch="112" data-name="CONTACT">
+    <div class="wrap">
+      <div class="head">
+        <div class="chtag"><span class="mono">CH</span><b>112</b><span class="lbl">Contact</span></div>
+        <div>
+          <h2>Une question,<br>une clé&nbsp;?</h2>
+          <p class="lede">Rejoignez le canal Telegram, ou écrivez-nous directement pour obtenir une clé, réunir plusieurs appareils sur une seule clé ou demander de l'aide. Depuis un PC ou une télé, scannez le code avec votre téléphone.</p>
+        </div>
+      </div>
+      <article class="tg channel">
+        <div class="qr" data-url="https://t.me/+UMfrd9mlP4ZiMTg0" data-label="canal Telegram Mega Player"></div>
+        <div>
+          <p class="k">Canal Telegram</p>
+          <h3 class="ch-title">Rejoignez le canal Mega Player</h3>
+          <p class="handle">t.me/+UMfrd9mlP4ZiMTg0</p>
+          <div class="tg-actions">
+            <a class="btn btn-accent" href="https://t.me/+UMfrd9mlP4ZiMTg0" target="_blank" rel="noopener">Rejoindre le canal</a>
+            <button class="btn btn-line" type="button" data-copy="https://t.me/+UMfrd9mlP4ZiMTg0">Copier le lien</button>
+          </div>
+        </div>
+      </article>
+      <div class="contacts">
+        <article class="tg">
+          <div class="qr" data-url="https://t.me/Forza11308" data-label="Telegram @Forza11308"></div>
+          <div>
+            <p class="k">Telegram</p>
+            <p class="handle">@Forza11308</p>
+            <div class="tg-actions">
+              <a class="btn btn-accent" href="https://t.me/Forza11308" target="_blank" rel="noopener">Ouvrir dans Telegram</a>
+              <button class="btn btn-line" type="button" data-copy="@Forza11308">Copier</button>
+            </div>
+          </div>
+        </article>
+        <article class="tg">
+          <div class="qr" data-url="https://t.me/KUQEZI05" data-label="Telegram @KUQEZI05"></div>
+          <div>
+            <p class="k">Telegram</p>
+            <p class="handle">@KUQEZI05</p>
+            <div class="tg-actions">
+              <a class="btn btn-accent" href="https://t.me/KUQEZI05" target="_blank" rel="noopener">Ouvrir dans Telegram</a>
+              <button class="btn btn-line" type="button" data-copy="@KUQEZI05">Copier</button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="end">
+  <div class="mire" aria-hidden="true"></div>
+  <div class="mire2" aria-hidden="true"></div>
+  <div class="wrap end-grid">
+    <div>
+      <p class="fin">Fin des programmes</p>
+      <a class="brand" href="#direct" aria-label="Mega Player, retour au début">
+        <svg viewBox="59 244 1184 797" aria-hidden="true"><use href="#mp-mono"/></svg>
+        <span>MEGA PLAYER</span>
+      </a>
+      <p class="tag">Le lecteur IPTV pour la box, le téléphone et le PC : TV en direct, Nuvio, En ligne, Collection et sport dans une seule appli.</p>
+    </div>
+    <div>
+      <h4>Chaînes</h4>
+      <ul>
+        <li><a href="#programme">102 · Programme</a></li>
+        <li><a href="#vues">103 · 4 vues</a></li>
+        <li><a href="#alaune">104 · À la une</a></li>
+        <li><a href="#images">105 · En images</a></li>
+        <li><a href="#ecrans">106 · Écrans</a></li>
+        <li><a href="#couleur">107 · Couleur</a></li>
+        <li><a href="#fiche">108 · Fiche technique</a></li>
+        <li><a href="#tarifs">109 · Tarifs</a></li>
+        <li><a href="#telecharger">110 · Démarrer</a></li>
+        <li><a href="#questions">111 · Questions</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="https://t.me/+UMfrd9mlP4ZiMTg0" target="_blank" rel="noopener">Canal Telegram</a></li>
+        <li><a href="https://t.me/Forza11308" target="_blank" rel="noopener">Telegram · @Forza11308</a></li>
+        <li><a href="https://t.me/KUQEZI05" target="_blank" rel="noopener">Telegram · @KUQEZI05</a></li>
+        <li><a href="https://github.com/yangtresso47-source/mega-player-releases" target="_blank" rel="noopener">Téléchargements sur GitHub</a></li>
+        <li>Aussi : Mega Musique</li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap legal"><span>© 2026 Mega Player</span><span>Aucun abonnement IPTV n'est vendu avec l'appli.</span></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function all(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+
+  /* ---------- Ville la nuit (canvas) ---------- */
+  var canvas = document.querySelector('.city');
+  function hexToRgb(h) {
+    h = (h || '').trim().replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+    var n = parseInt(h, 16);
+    if (isNaN(n)) return [122, 44, 255];
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function rgba(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+  function mix(a, b, t) { return [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)]; }
+  function drawCity() {
+    if (!canvas || !canvas.getContext) return;
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    var g = canvas.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var acc = hexToRgb(getComputedStyle(root).getPropertyValue('--accent'));
+    var seed = 20470;
+    function rnd() { seed = (seed + 0x6D2B79F5) | 0; var t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    var horizon = h * 0.72;
+    var sky = g.createLinearGradient(0, 0, 0, horizon);
+    sky.addColorStop(0, 'rgb(4,5,10)');
+    sky.addColorStop(0.55, 'rgb(10,15,32)');
+    sky.addColorStop(1, rgba(mix([10, 15, 32], acc, 0.38), 1));
+    g.fillStyle = sky; g.fillRect(0, 0, w, horizon + 1);
+    var halo = g.createRadialGradient(w * 0.64, horizon, 0, w * 0.64, horizon, Math.max(w, h) * 0.55);
+    halo.addColorStop(0, rgba(acc, 0.32)); halo.addColorStop(1, rgba(acc, 0));
+    g.fillStyle = halo; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 160; i++) {
+      var sx = rnd() * w, sy = rnd() * horizon * 0.62, ss = rnd() < 0.08 ? 1.7 : 1;
+      g.fillStyle = 'rgba(255,255,255,' + (0.12 + rnd() * 0.5).toFixed(2) + ')';
+      g.fillRect(sx, sy, ss, ss);
+    }
+    var lit = [];
+    function layer(base, minW, maxW, minH, maxH, pLit, keep) {
+      var x = -10;
+      while (x < w + 10) {
+        var bw = minW + rnd() * (maxW - minW);
+        var bh = (minH + rnd() * (maxH - minH)) * horizon;
+        var top = horizon - bh;
+        g.fillStyle = base; g.fillRect(x, top, bw, bh + 1);
+        if (rnd() < 0.18) { g.fillRect(x + bw * 0.45, top - 14, 2, 14); g.fillStyle = 'rgba(255,60,60,.9)'; g.fillRect(x + bw * 0.45 - 1, top - 16, 4, 3); }
+        for (var wy = top + 6; wy < horizon - 4; wy += 9) {
+          for (var wx = x + 4; wx < x + bw - 5; wx += 7) {
+            if (rnd() < pLit) {
+              var r = rnd();
+              var col = r < 0.7 ? [255, 213, 138] : (r < 0.88 ? [168, 208, 255] : acc);
+              g.fillStyle = rgba(col, (0.35 + rnd() * 0.55).toFixed(2));
+              g.fillRect(wx, wy, 3, 4);
+              if (keep && rnd() < 0.35) lit.push([wx, col]);
+            }
+          }
+        }
+        x += bw + (rnd() < 0.3 ? rnd() * 10 : 0);
+      }
+    }
+    layer('rgb(14,19,34)', 18, 48, 0.12, 0.34, 0.08, false);
+    layer('rgb(8,11,20)', 26, 84, 0.18, 0.56, 0.24, true);
+    var water = g.createLinearGradient(0, horizon, 0, h);
+    water.addColorStop(0, 'rgb(9,12,22)'); water.addColorStop(1, 'rgb(3,4,8)');
+    g.fillStyle = water; g.fillRect(0, horizon, w, h - horizon);
+    for (var k = 0; k < lit.length; k++) {
+      var lx = lit[k][0], len = (h - horizon) * (0.25 + rnd() * 0.6);
+      var st = g.createLinearGradient(0, horizon, 0, horizon + len);
+      st.addColorStop(0, rgba(lit[k][1], 0.28)); st.addColorStop(1, rgba(lit[k][1], 0));
+      g.fillStyle = st; g.fillRect(lx, horizon + 2, 2, len);
+    }
+    g.fillStyle = rgba(acc, 0.22); g.fillRect(0, horizon, w, 1);
+  }
+  var rT = null;
+  window.addEventListener('resize', function () { clearTimeout(rT); rT = setTimeout(drawCity, 150); });
+
+  /* ---------- Couleur d'accent ---------- */
+  var ACC = {
+    violet: ['#7A2CFF', '#3B0BC9', '#D46BFF', '#FFFFFF'],
+    or: ['#F2B544', '#A8700F', '#FFE7A8', '#1A1205'],
+    rouge: ['#FF2D3F', '#A80A22', '#FF8A8A', '#FFFFFF'],
+    ocean: ['#2F9BEA', '#0E4FA8', '#8AD4FF', '#04121F'],
+    emeraude: ['#27C46B', '#0B7A3C', '#8DF0B6', '#04140B']
+  };
+  var sws = all('.sw');
+  function setAccent(name, save) {
+    var a = ACC[name] || ACC.violet;
+    root.style.setProperty('--accent', a[0]);
+    root.style.setProperty('--accent-2', a[1]);
+    root.style.setProperty('--accent-3', a[2]);
+    root.style.setProperty('--on-accent', a[3]);
+    sws.forEach(function (b) { var on = b.getAttribute('data-acc') === name; b.setAttribute('aria-checked', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; });
+    if (save) { try { localStorage.setItem('mp-accent', name); } catch (e) {} }
+    drawCity();
+  }
+  sws.forEach(function (b, idx) {
+    b.addEventListener('click', function () { setAccent(b.getAttribute('data-acc'), true); });
+    b.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      var n = sws[(idx + (e.key === 'ArrowRight' ? 1 : sws.length - 1)) % sws.length];
+      setAccent(n.getAttribute('data-acc'), true); n.focus();
+    });
+  });
+  var saved = null;
+  try { saved = localStorage.getItem('mp-accent'); } catch (e) {}
+  setAccent(saved && ACC[saved] ? saved : 'violet', false);
+
+  /* ---------- Guide des programmes ---------- */
+  var rows = all('.epg-track').map(function (t) { return Array.prototype.slice.call(t.querySelectorAll('.cell')); });
+  var cells = [].concat.apply([], rows);
+  var kEl = document.getElementById('epg-k'), tEl = document.getElementById('epg-t'), dEl = document.getElementById('epg-d');
+  function select(c, focus) {
+    cells.forEach(function (x) { var on = x === c; x.setAttribute('aria-pressed', on ? 'true' : 'false'); x.tabIndex = on ? 0 : -1; });
+    kEl.textContent = c.getAttribute('data-k');
+    tEl.textContent = c.querySelector('.n').textContent;
+    dEl.textContent = c.querySelector('.more').textContent;
+    if (focus) c.focus();
+  }
+  function pos(c) { for (var r = 0; r < rows.length; r++) { var i = rows[r].indexOf(c); if (i >= 0) return [r, i]; } return [0, 0]; }
+  cells.forEach(function (c) {
+    c.addEventListener('click', function () { select(c, false); });
+    c.addEventListener('keydown', function (e) {
+      var p = pos(c), r = p[0], i = p[1], target = null;
+      if (e.key === 'ArrowRight') target = rows[r][Math.min(i + 1, rows[r].length - 1)];
+      else if (e.key === 'ArrowLeft') target = rows[r][Math.max(i - 1, 0)];
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        var nr = r + (e.key === 'ArrowDown' ? 1 : -1);
+        if (nr >= 0 && nr < rows.length) {
+          var s = parseFloat(c.getAttribute('data-s')), best = rows[nr][0];
+          rows[nr].forEach(function (x) { if (Math.abs(parseFloat(x.getAttribute('data-s')) - s) < Math.abs(parseFloat(best.getAttribute('data-s')) - s)) best = x; });
+          target = best;
+        }
+      } else if (e.key === 'Home') target = rows[r][0];
+      else if (e.key === 'End') target = rows[r][rows[r].length - 1];
+      if (target) { e.preventDefault(); select(target, true); }
+    });
+  });
+
+  /* ---------- Onglets à flèches (4 vues, galerie) ---------- */
+  function tabs(list, show, vertical) {
+    list.forEach(function (b, i) {
+      b.addEventListener('click', function () { show(i); });
+      b.addEventListener('keydown', function (e) {
+        var next = vertical ? ['ArrowDown', 'ArrowRight'] : ['ArrowRight', 'ArrowDown'];
+        var prev = vertical ? ['ArrowUp', 'ArrowLeft'] : ['ArrowLeft', 'ArrowUp'];
+        var d = next.indexOf(e.key) >= 0 ? 1 : (prev.indexOf(e.key) >= 0 ? -1 : 0);
+        if (!d) return;
+        e.preventDefault();
+        var n = (i + d + list.length) % list.length;
+        show(n); list[n].focus();
+      });
+    });
+  }
+  function select1(list, i) { list.forEach(function (b, k) { b.setAttribute('aria-selected', k === i ? 'true' : 'false'); b.tabIndex = k === i ? 0 : -1; }); }
+  function preload(srcs) { srcs.forEach(function (s) { var im = new Image(); im.src = s; }); }
+
+  var vueBtns = all('.vue-tabs button');
+  var vueBox = document.getElementById('vue-box'), vueTel = document.getElementById('vue-tel'), vueDesc = document.getElementById('vue-desc');
+  tabs(vueBtns, function (i) {
+    var b = vueBtns[i], name = b.getAttribute('data-name');
+    select1(vueBtns, i);
+    vueBox.src = b.getAttribute('data-box'); vueBox.alt = 'Vue ' + name + ' du direct sur la box';
+    vueTel.src = b.getAttribute('data-tel'); vueTel.alt = 'Vue ' + name + ' du direct sur le téléphone';
+    vueDesc.textContent = b.getAttribute('data-desc');
+  }, false);
+
+  var zgBtns = all('.zg-list button');
+  var zgImg = document.getElementById('zg-img'), zgNum = document.getElementById('zg-num'), zgName = document.getElementById('zg-name'), zgDesc = document.getElementById('zg-desc');
+  tabs(zgBtns, function (i) {
+    var b = zgBtns[i];
+    select1(zgBtns, i);
+    zgImg.src = b.getAttribute('data-src'); zgImg.alt = b.getAttribute('data-alt');
+    zgNum.textContent = String(i + 1);
+    zgName.textContent = b.lastChild.textContent;
+    zgDesc.textContent = b.getAttribute('data-desc');
+  }, true);
+
+  var pre = false;
+  function preloadAll() {
+    if (pre) return; pre = true;
+    preload(vueBtns.map(function (b) { return b.getAttribute('data-box'); }).concat(vueBtns.map(function (b) { return b.getAttribute('data-tel'); }), zgBtns.map(function (b) { return b.getAttribute('data-src'); })));
+  }
+  window.addEventListener('load', function () { setTimeout(preloadAll, 1200); });
+
+  /* ---------- Chaîne en cours (barre du haut) et CH + / CH − ---------- */
+  var secs = all('[data-ch]');
+  var osd = document.getElementById('osd-ch');
+  var cur = 0;
+  function updateCh() {
+    var y = Math.min(window.innerHeight * 0.35, 320), idx = 0;
+    secs.forEach(function (s, k) { if (s.getBoundingClientRect().top <= y) idx = k; });
+    cur = idx;
+    osd.textContent = 'CH ' + secs[cur].getAttribute('data-ch') + ' · ' + secs[cur].getAttribute('data-name');
+  }
+  var tick = false;
+  window.addEventListener('scroll', function () { if (!tick) { tick = true; requestAnimationFrame(function () { tick = false; updateCh(); }); } }, { passive: true });
+  updateCh();
+  function zap(d) {
+    updateCh();
+    var n = Math.max(0, Math.min(secs.length - 1, cur + d));
+    secs[n].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+  document.getElementById('ch-plus').addEventListener('click', function () { zap(1); });
+  document.getElementById('ch-moins').addEventListener('click', function () { zap(-1); });
+
+  /* ---------- Contact : QR codes Telegram et copie ---------- */
+  var qrs = all('.qr[data-url]');
+  if (typeof window.qrcode === 'function') {
+    qrs.forEach(function (box) {
+      try {
+        var q = window.qrcode(0, 'M');
+        q.addData(box.getAttribute('data-url'));
+        q.make();
+        var n = q.getModuleCount(), m = 2, d = '';
+        for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + m) + ' ' + (r + m) + 'h1v1h-1z';
+        box.innerHTML = '<svg viewBox="0 0 ' + (n + 2 * m) + ' ' + (n + 2 * m) + '" shape-rendering="crispEdges" role="img" aria-label="Code QR ' + box.getAttribute('data-label') + '"><rect width="100%" height="100%"/><path d="' + d + '"/></svg>';
+      } catch (e) { box.hidden = true; }
+    });
+  } else {
+    qrs.forEach(function (box) { box.hidden = true; });
+  }
+  all('[data-copy]').forEach(function (b) {
+    var label = b.textContent;
+    function done(txt) { b.textContent = txt; setTimeout(function () { b.textContent = label; }, 1600); }
+    function fallback() {
+      var scope = b.closest('.tg, .dl-row');
+      var h = scope && scope.querySelector('.handle, .dl-url');
+      if (!h) { done('Copie impossible'); return; }
+      var sel = window.getSelection(), rg = document.createRange();
+      rg.selectNodeContents(h); sel.removeAllRanges(); sel.addRange(rg);
+      done('Sélectionné');
+    }
+    b.addEventListener('click', function () {
+      try { navigator.clipboard.writeText(b.getAttribute('data-copy')).then(function () { done('Copié'); }, fallback); }
+      catch (e) { fallback(); }
+    });
+  });
+})();
+</script>
+</body></html>
